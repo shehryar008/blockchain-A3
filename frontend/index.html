@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shehryar Ahmed Supply Chain DApp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    body { background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%); }
+    .card { backdrop-filter: blur(12px); }
+    .soft-shadow { box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08); }
+  </style>
+</head>
+<body class="text-slate-800">
+  <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Supply Chain Management DApp</h1>
+        <p class="text-sm text-slate-600">Prepared by Shehryar Ahmed</p>
+      </div>
+      <div class="text-right text-sm">
+        <div id="walletStatus" class="font-medium text-slate-900">Wallet not connected</div>
+        <div id="networkStatus" class="text-slate-600">Localhost 8545 ready</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <section class="grid gap-6 lg:grid-cols-3">
+      <div class="card soft-shadow rounded-2xl bg-white p-6 lg:col-span-1">
+        <h2 class="text-lg font-semibold">Connection</h2>
+        <p class="mt-2 text-sm text-slate-600">Connect MetaMask to interact with the deployed contract.</p>
+        <button id="connectBtn" class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-3 font-medium text-white hover:bg-slate-700">Connect Wallet</button>
+        <div class="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+          <div><span class="font-medium">Account:</span> <span id="account">-</span></div>
+          <div class="mt-1"><span class="font-medium">Contract:</span> <span id="contractAddress">0x5FbDB2315678afecb367f032d93F642f64180aa3</span></div>
+        </div>
+      </div>
+
+      <div class="card soft-shadow rounded-2xl bg-white p-6 lg:col-span-2">
+        <h2 class="text-lg font-semibold">Product Operations</h2>
+        <div class="mt-4 grid gap-4 md:grid-cols-2">
+          <input id="productName" class="rounded-xl border border-slate-300 px-4 py-3" placeholder="Product name" />
+          <input id="productDescription" class="rounded-xl border border-slate-300 px-4 py-3" placeholder="Description" />
+          <button id="registerBtn" class="rounded-xl bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-500">Register Product</button>
+          <button id="refreshBtn" class="rounded-xl bg-indigo-600 px-4 py-3 font-medium text-white hover:bg-indigo-500">Load Products</button>
+        </div>
+
+        <div class="mt-6 grid gap-4 md:grid-cols-4">
+          <input id="transferProductId" class="rounded-xl border border-slate-300 px-4 py-3" placeholder="Product ID" />
+          <select id="transferType" class="rounded-xl border border-slate-300 px-4 py-3">
+            <option value="distributor">To Distributor</option>
+            <option value="retailer">To Retailer</option>
+            <option value="customer">To Customer</option>
+          </select>
+          <input id="recipientAddress" class="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2" placeholder="Recipient wallet address" />
+        </div>
+        <button id="transferBtn" class="mt-4 rounded-xl bg-sky-600 px-4 py-3 font-medium text-white hover:bg-sky-500">Transfer Product</button>
+
+        <div id="message" class="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">Ready.</div>
+      </div>
+    </section>
+
+    <section class="mt-8 grid gap-6 lg:grid-cols-2">
+      <div class="card soft-shadow rounded-2xl bg-white p-6">
+        <h2 class="text-lg font-semibold">All Products</h2>
+        <div id="productsList" class="mt-4 space-y-3 text-sm"></div>
+      </div>
+
+      <div class="card soft-shadow rounded-2xl bg-white p-6">
+        <h2 class="text-lg font-semibold">Audit Trail</h2>
+        <div class="mt-4 flex gap-3">
+          <input id="historyProductId" class="flex-1 rounded-xl border border-slate-300 px-4 py-3" placeholder="Product ID for history" />
+          <button id="historyBtn" class="rounded-xl bg-slate-900 px-4 py-3 font-medium text-white">View History</button>
+        </div>
+        <div id="historyList" class="mt-4 space-y-3 text-sm"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-200 bg-white/70 py-4">
+    <div class="mx-auto max-w-7xl px-4 text-sm text-slate-600 sm:px-6 lg:px-8">
+      Shehryar Ahmed - Supply Chain Management DApp using Polygon and Hardhat
+    </div>
+  </footer>
+
+<script>
+const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const ABI = [
+  "function registerProduct(string name, string description) returns (uint256)",
+  "function transferToDistributor(uint256 productId, address distributor)",
+  "function transferToRetailer(uint256 productId, address retailer)",
+  "function transferToCustomer(uint256 productId, address customer)",
+  "function getProduct(uint256 productId) view returns (uint256 id, string name, string description, address currentOwner, uint8 status)",
+  "function getAllProductIds() view returns (uint256[])",
+  "function getHistoryLength(uint256 productId) view returns (uint256)",
+  "function getHistoryEntry(uint256 productId, uint256 index) view returns (address actor, address from, address to, uint8 status, string action, uint256 timestamp)",
+  "function MANUFACTURER_ROLE() view returns (bytes32)",
+  "function DISTRIBUTOR_ROLE() view returns (bytes32)",
+  "function RETAILER_ROLE() view returns (bytes32)",
+  "function CUSTOMER_ROLE() view returns (bytes32)"
+];
+
+let provider, signer, contract;
+
+const el = (id) => document.getElementById(id);
+const statusNames = ["Manufactured", "InTransit", "Delivered"];
+
+function setMessage(text) { el("message").textContent = text; }
+
+async function connect() {
+  if (!window.ethereum) {
+    setMessage("MetaMask is not installed.");
+    return;
+  }
+  provider = new ethers.BrowserProvider(window.ethereum);
+  signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  const account = await signer.getAddress();
+  el("account").textContent = account;
+  el("walletStatus").textContent = "Connected";
+  setMessage("Wallet connected successfully.");
+}
+
+async function registerProduct() {
+  try {
+    const name = el("productName").value.trim();
+    const description = el("productDescription").value.trim();
+    if (!name || !description) return setMessage("Enter product name and description.");
+    const tx = await contract.registerProduct(name, description);
+    setMessage("Registering product...");
+    await tx.wait();
+    setMessage("Product registered.");
+    await loadProducts();
+  } catch (err) {
+    setMessage(err.shortMessage || err.message || "Registration failed.");
+  }
+}
+
+async function transferProduct() {
+  try {
+    const productId = BigInt(el("transferProductId").value);
+    const recipient = el("recipientAddress").value.trim();
+    const type = el("transferType").value;
+    let tx;
+    if (type === "distributor") tx = await contract.transferToDistributor(productId, recipient);
+    if (type === "retailer") tx = await contract.transferToRetailer(productId, recipient);
+    if (type === "customer") tx = await contract.transferToCustomer(productId, recipient);
+    setMessage("Submitting transfer...");
+    await tx.wait();
+    setMessage("Product transferred.");
+    await loadProducts();
+  } catch (err) {
+    setMessage(err.shortMessage || err.message || "Transfer failed.");
+  }
+}
+
+async function loadProducts() {
+  try {
+    if (!contract) return;
+    const ids = await contract.getAllProductIds();
+    const list = el("productsList");
+    list.innerHTML = "";
+    if (!ids.length) {
+      list.innerHTML = '<div class="rounded-xl bg-slate-50 p-4">No products found.</div>';
+      return;
+    }
+    for (const id of ids) {
+      const p = await contract.getProduct(id);
+      const item = document.createElement("div");
+      item.className = "rounded-xl border border-slate-200 p-4";
+      item.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-semibold">#${p.id.toString()} - ${p.name}</div>
+          <div class="rounded-full bg-slate-100 px-3 py-1 text-xs">${statusNames[Number(p.status)]}</div>
+        </div>
+        <div class="mt-2 text-slate-600">${p.description}</div>
+        <div class="mt-2 break-all text-xs text-slate-500">Owner: ${p.currentOwner}</div>`;
+      list.appendChild(item);
+    }
+  } catch (err) {
+    setMessage(err.shortMessage || err.message || "Unable to load products.");
+  }
+}
+
+async function loadHistory() {
+  try {
+    const id = BigInt(el("historyProductId").value);
+    const length = await contract.getHistoryLength(id);
+    const history = el("historyList");
+    history.innerHTML = "";
+    for (let i = 0n; i < length; i++) {
+      const h = await contract.getHistoryEntry(id, i);
+      const node = document.createElement("div");
+      node.className = "rounded-xl border border-slate-200 p-4";
+      node.innerHTML = `
+        <div class="font-semibold">${h.action}</div>
+        <div class="mt-1 text-slate-600">From: ${h.from}</div>
+        <div class="text-slate-600">To: ${h.to}</div>
+        <div class="text-slate-600">Actor: ${h.actor}</div>
+        <div class="text-slate-600">Status: ${statusNames[Number(h.status)]}</div>
+        <div class="text-slate-500 text-xs mt-1">${new Date(Number(h.timestamp) * 1000).toLocaleString()}</div>`;
+      history.appendChild(node);
+    }
+    if (length === 0n) history.innerHTML = '<div class="rounded-xl bg-slate-50 p-4">No history found.</div>';
+  } catch (err) {
+    setMessage(err.shortMessage || err.message || "Unable to load history.");
+  }
+}
+
+el("connectBtn").addEventListener("click", connect);
+el("registerBtn").addEventListener("click", registerProduct);
+el("transferBtn").addEventListener("click", transferProduct);
+el("refreshBtn").addEventListener("click", loadProducts);
+el("historyBtn").addEventListener("click", loadHistory);
+</script>
+</body>
+</html>

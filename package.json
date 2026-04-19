@@ -1,0 +1,19 @@
+{
+  "name": "shehryar-ahmed-supplychain-dapp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Supply Chain Management DApp using Polygon and Hardhat",
+  "scripts": {
+    "clean": "hardhat clean",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
+    "verify:amoy": "hardhat verify --network amoy <DEPLOYED_CONTRACT_ADDRESS> <ADMIN_ADDRESS>"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.17"
+  }
+}
